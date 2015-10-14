@@ -119,21 +119,21 @@ class BitmapHunter implements Runnable {
    * {@code inSampleSize}).
    */
   static Bitmap decodeStream(InputStream stream, Request request) throws IOException {
-    MarkableInputStream markStream = new MarkableInputStream(stream);
-    stream = markStream;
-
-    long mark = markStream.savePosition(65536); // TODO fix this crap.
+    stream = new MemoryEfficientBufferedInputStream(stream);
+    stream.mark(Integer.MAX_VALUE);
 
     final BitmapFactory.Options options = RequestHandler.createBitmapOptions(request);
     final boolean calculateSize = RequestHandler.requiresInSampleSize(options);
 
     boolean isWebPFile = Utils.isWebPFile(stream);
     boolean isPurgeable = request.purgeable && android.os.Build.VERSION.SDK_INT < 21;
-    markStream.reset(mark);
+
+    stream.reset();
     // We decode from a byte array because, a) when decoding a WebP network stream, BitmapFactory
     // throws a JNI Exception, so we workaround by decoding a byte array, or b) user requested
     // purgeable, which only affects bitmaps decoded from byte arrays.
     if (isWebPFile || isPurgeable) {
+      stream.mark(0);
       byte[] bytes = Utils.toByteArray(stream);
       if (calculateSize) {
         BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
@@ -147,8 +147,9 @@ class BitmapHunter implements Runnable {
         RequestHandler.calculateInSampleSize(request.targetWidth, request.targetHeight, options,
             request);
 
-        markStream.reset(mark);
+        stream.reset();
       }
+      stream.mark(0);
       Bitmap bitmap = BitmapFactory.decodeStream(stream, null, options);
       if (bitmap == null) {
         // Treat null as an IO exception, we will eventually retry.
