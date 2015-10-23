@@ -52,17 +52,18 @@ public abstract class RequestHandler {
     private final Picasso.LoadedFrom loadedFrom;
     private final Bitmap bitmap;
     private final InputStream stream;
-    private final int exifOrientation;
+    private final Integer exifOrientation;
 
     public Result(Bitmap bitmap, Picasso.LoadedFrom loadedFrom) {
-      this(checkNotNull(bitmap, "bitmap == null"), null, loadedFrom, 0);
+      this(checkNotNull(bitmap, "bitmap == null"), null, loadedFrom, null);
     }
 
     public Result(InputStream stream, Picasso.LoadedFrom loadedFrom) {
-      this(null, checkNotNull(stream, "stream == null"), loadedFrom, 0);
+      this(null, checkNotNull(stream, "stream == null"), loadedFrom, null);
     }
 
-    Result(Bitmap bitmap, InputStream stream, Picasso.LoadedFrom loadedFrom, int exifOrientation) {
+    Result(Bitmap bitmap, InputStream stream, Picasso.LoadedFrom loadedFrom,
+           Integer exifOrientation) {
       if (!(bitmap != null ^ stream != null)) {
         throw new AssertionError();
       }
@@ -94,7 +95,7 @@ public abstract class RequestHandler {
      * Returns the resulting EXIF orientation generated from a {@link #load(Request, int)} call.
      * This is only accessible to built-in RequestHandlers.
      */
-    int getExifOrientation() {
+    Integer getExifOrientation() {
       return exifOrientation;
     }
   }

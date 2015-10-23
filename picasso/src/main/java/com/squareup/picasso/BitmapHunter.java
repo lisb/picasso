@@ -18,7 +18,17 @@ package com.squareup.picasso;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.NetworkInfo;
+import android.util.Log;
+
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.ImageProcessingException;
+import com.drew.metadata.Metadata;
+import com.drew.metadata.MetadataException;
+import com.drew.metadata.exif.ExifDirectoryBase;
+import com.drew.metadata.exif.ExifIFD0Directory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
@@ -50,6 +60,9 @@ import static com.squareup.picasso.Utils.getLogIdsForHunter;
 import static com.squareup.picasso.Utils.log;
 
 class BitmapHunter implements Runnable {
+
+  private static final String TAG = "BitmapHunter";
+
   /**
    * Global lock for bitmap decoding to ensure that we are only are decoding one at a time. Since
    * this will only ever happen in background threads we help avoid excessive memory thrashing as
@@ -198,6 +211,50 @@ class BitmapHunter implements Runnable {
     }
   }
 
+  int getOrientation() {
+    InputStream in = null;
+    try {
+      final RequestHandler.Result result = requestHandler.load(data, networkPolicy);
+      in = result.getStream();
+
+      final Integer exifOrientation = result.getExifOrientation();
+      if (exifOrientation != null) {
+        return exifOrientation;
+      }
+
+      return getOrientation(in);
+    } catch (IOException e) {
+      Log.e(TAG, "Failed to load result to read orientation.", e);
+      return ExifInterface.ORIENTATION_NORMAL;
+    } finally {
+      Utils.closeQuietly(in);
+    }
+  }
+
+  static int getOrientation(InputStream in) {
+    try {
+      final Metadata metadata = ImageMetadataReader.readMetadata(in);
+      final ExifIFD0Directory exifIFD0Directory =
+              metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
+      if (exifIFD0Directory != null
+              && exifIFD0Directory.containsTag(ExifDirectoryBase.TAG_ORIENTATION)) {
+        final int orientation = exifIFD0Directory.getInt(ExifDirectoryBase.TAG_ORIENTATION);
+        Log.v(TAG, "Image orientation gotten. orientation:" + orientation);
+        return orientation;
+      } else {
+        Log.v(TAG, "No orientation found.");
+        return ExifInterface.ORIENTATION_NORMAL;
+      }
+    } catch (MetadataException e) {
+      Log.e(TAG, "Failed to get orientation.", e);
+    } catch (ImageProcessingException e) {
+      Log.e(TAG, "Failed to get orientation.", e);
+    } catch (IOException e) {
+      Log.e(TAG, "Failed to get orientation.", e);
+    }
+    return ExifInterface.ORIENTATION_NORMAL;
+  }
+
   Bitmap hunt() throws IOException {
     Bitmap bitmap = null;
 
@@ -217,7 +274,7 @@ class BitmapHunter implements Runnable {
     RequestHandler.Result result = requestHandler.load(data, networkPolicy);
     if (result != null) {
       loadedFrom = result.getLoadedFrom();
-      exifOrientation = result.getExifOrientation();
+      Integer exifOrientation = result.getExifOrientation();
       bitmap = result.getBitmap();
 
       // If there was no Bitmap then we need to decode it from the stream.
@@ -225,10 +282,16 @@ class BitmapHunter implements Runnable {
         InputStream is = result.getStream();
         try {
           bitmap = decodeStream(is, data);
+          if (exifOrientation == null) {
+            exifOrientation = getOrientation();
+          }
         } finally {
           Utils.closeQuietly(is);
         }
       }
+
+      this.exifOrientation = exifOrientation != null
+              ? exifOrientation : ExifInterface.ORIENTATION_NORMAL;
     }
 
     if (bitmap != null) {

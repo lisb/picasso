@@ -19,6 +19,11 @@
       <artifactId>okhttp</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.drewnoakes</groupId>
+      <artifactId>metadata-extractor</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <dependency>
       <groupId>junit</groupId>
