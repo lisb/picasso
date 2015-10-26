@@ -17,28 +17,18 @@ package com.squareup.picasso;
  *  limitations under the License.
  */
 
-import java.io.BufferedOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Wraps an existing {@link InputStream} and <em>buffers</em> the input.
- * Expensive interaction with the underlying input stream is minimized, since
- * most (smaller) requests can be satisfied by accessing the buffer alone. The
- * drawback is that some extra space is required to hold the buffer and that
- * copying takes place when filling that buffer, but this is usually outweighed
- * by the performance benefits.
+ * Add {@link #markEx(int)} and {@link #resetEx(int)} to mark many points.
+ * Add {@link #clearMarks()} to shrink buffers for memory efficiency.
  *
- * <p/>A typical application pattern for the class looks like this:<p/>
- *
- * <pre>
- * BufferedInputStream buf = new BufferedInputStream(new FileInputStream(&quot;file.java&quot;));
- * </pre>
- *
- * @see BufferedOutputStream
+ * So this class implementation base on {@link java.io.BufferedInputStream},
+ * this class has {@link java.io.BufferedInputStream} characteristic.
  */
-public class MemoryEfficientBufferedInputStream extends FilterInputStream {
+public class ExMarkInputStream extends FilterInputStream {
     /**
      * The default buffer size if it is not specified.
      *
@@ -74,6 +64,8 @@ public class MemoryEfficientBufferedInputStream extends FilterInputStream {
 
     private int initialSize;
 
+    private int defaultMark;
+
     /**
      * Constructs a new {@code BufferedInputStream}, providing {@code in} with a buffer
      * of 8192 bytes.
@@ -84,7 +76,7 @@ public class MemoryEfficientBufferedInputStream extends FilterInputStream {
      *
      * @param in the {@code InputStream} the buffer reads from.
      */
-    public MemoryEfficientBufferedInputStream(InputStream in) {
+    public ExMarkInputStream(InputStream in) {
         this(in, DEFAULT_BUFFER_SIZE);
     }
 
@@ -100,7 +92,7 @@ public class MemoryEfficientBufferedInputStream extends FilterInputStream {
      * @param size the size of buffer in bytes.
      * @throws IllegalArgumentException if {@code size <= 0}.
      */
-    public MemoryEfficientBufferedInputStream(InputStream in, int size) {
+    public ExMarkInputStream(InputStream in, int size) {
         super(in);
         if (size <= 0) {
             throw new IllegalArgumentException("size <= 0");
@@ -209,8 +201,37 @@ public class MemoryEfficientBufferedInputStream extends FilterInputStream {
      */
     @Override
     public synchronized void mark(int readlimit) {
-        marklimit = readlimit;
-        markpos = pos;
+        defaultMark = markEx(readlimit);
+    }
+
+    public synchronized void clearMarks() {
+        marklimit = 0;
+        markpos = -1;
+        defaultMark = -1;
+    }
+
+    public int markEx(int readlimit) {
+        // result is pos - markpos;
+        if (markpos == -1) {
+            markpos = pos;
+        }
+
+        final int markExLimit = readlimit + (pos - markpos);
+        if (markExLimit > marklimit) {
+            this.marklimit = markExLimit;
+        }
+
+        return pos - markpos;
+    }
+
+    public void resetEx(int position) throws IOException {
+        if (buf == null) {
+            throw new IOException("Stream is closed");
+        }
+        if (markpos == -1) {
+            throw new IOException("Mark has been invalidated.");
+        }
+        pos = markpos + position;
     }
 
     /**
@@ -360,13 +381,10 @@ public class MemoryEfficientBufferedInputStream extends FilterInputStream {
      */
     @Override
     public synchronized void reset() throws IOException {
-        if (buf == null) {
-            throw new IOException("Stream is closed");
-        }
-        if (markpos == -1) {
+        if (defaultMark == -1) {
             throw new IOException("Mark has been invalidated.");
         }
-        pos = markpos;
+        resetEx(defaultMark);
     }
 
     /**
