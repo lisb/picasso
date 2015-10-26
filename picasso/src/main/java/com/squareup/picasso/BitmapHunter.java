@@ -132,22 +132,22 @@ class BitmapHunter implements Runnable {
    * {@code inSampleSize}).
    */
   static Bitmap decodeStream(InputStream stream, Request request) throws IOException {
-    stream = new MemoryEfficientBufferedInputStream(stream);
-    stream.mark(Integer.MAX_VALUE);
+    final ExMarkInputStream exStream = new ExMarkInputStream(stream);
+    final int markPosition = exStream.markEx(Integer.MAX_VALUE);
 
     final BitmapFactory.Options options = RequestHandler.createBitmapOptions(request);
     final boolean calculateSize = RequestHandler.requiresInSampleSize(options);
 
-    boolean isWebPFile = Utils.isWebPFile(stream);
+    boolean isWebPFile = Utils.isWebPFile(exStream);
     boolean isPurgeable = request.purgeable && android.os.Build.VERSION.SDK_INT < 21;
 
-    stream.reset();
+    exStream.resetEx(markPosition);
     // We decode from a byte array because, a) when decoding a WebP network stream, BitmapFactory
     // throws a JNI Exception, so we workaround by decoding a byte array, or b) user requested
     // purgeable, which only affects bitmaps decoded from byte arrays.
     if (isWebPFile || isPurgeable) {
-      stream.mark(0);
-      byte[] bytes = Utils.toByteArray(stream);
+      exStream.clearMarks();
+      byte[] bytes = Utils.toByteArray(exStream);
       if (calculateSize) {
         BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
         RequestHandler.calculateInSampleSize(request.targetWidth, request.targetHeight, options,
@@ -156,14 +156,14 @@ class BitmapHunter implements Runnable {
       return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
     } else {
       if (calculateSize) {
-        BitmapFactory.decodeStream(stream, null, options);
+        BitmapFactory.decodeStream(exStream, null, options);
         RequestHandler.calculateInSampleSize(request.targetWidth, request.targetHeight, options,
             request);
 
-        stream.reset();
+        exStream.resetEx(markPosition);
       }
-      stream.mark(0);
-      Bitmap bitmap = BitmapFactory.decodeStream(stream, null, options);
+      exStream.clearMarks();
+      Bitmap bitmap = BitmapFactory.decodeStream(exStream, null, options);
       if (bitmap == null) {
         // Treat null as an IO exception, we will eventually retry.
         throw new IOException("Failed to decode stream.");
