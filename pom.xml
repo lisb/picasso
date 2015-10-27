@@ -16,13 +16,13 @@
 
   <name>Picasso (Parent)</name>
   <description>A powerful image downloading and caching library for Android</description>
-  <url>http://github.com/square/picasso</url>
+  <url>http://github.com/lisb/picasso</url>
   <inceptionYear>2013</inceptionYear>
 
   <scm>
-    <url>http://github.com/square/picasso/</url>
-    <connection>scm:git:git://github.com/square/picasso.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/square/picasso.git</developerConnection>
+    <url>http://github.com/lisb/picasso/</url>
+    <connection>scm:git:git://github.com/lisb/picasso.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/lisb/picasso.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
 
