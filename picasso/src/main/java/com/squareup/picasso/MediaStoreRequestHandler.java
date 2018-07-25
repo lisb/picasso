@@ -20,6 +20,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.provider.MediaStore;
 import java.io.IOException;
@@ -105,10 +106,22 @@ class MediaStoreRequestHandler extends ContentStreamRequestHandler {
     Cursor cursor = null;
     try {
       cursor = contentResolver.query(uri, CONTENT_ORIENTATION, null, null, null);
-      if (cursor == null || !cursor.moveToFirst()) {
+      if (cursor == null || !cursor.moveToFirst() || cursor.isNull(0)) {
         return 0;
       }
-      return cursor.getInt(0);
+      int degree = cursor.getInt(0);
+      switch (degree) {
+        case 0:
+          return ExifInterface.ORIENTATION_NORMAL;
+        case 90:
+          return ExifInterface.ORIENTATION_ROTATE_90;
+        case 180:
+          return ExifInterface.ORIENTATION_ROTATE_180;
+        case 270:
+          return ExifInterface.ORIENTATION_ROTATE_270;
+        default:
+          return 0;
+      }
     } catch (RuntimeException ignored) {
       // If the orientation column doesn't exist, assume no rotation.
       return 0;
