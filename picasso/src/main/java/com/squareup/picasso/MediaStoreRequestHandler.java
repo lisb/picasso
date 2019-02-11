@@ -24,6 +24,8 @@ import android.media.ExifInterface;
 import android.net.Uri;
 import android.provider.MediaStore;
 import java.io.IOException;
+import okio.Okio;
+import okio.Source;
 
 import static android.content.ContentResolver.SCHEME_CONTENT;
 import static android.content.ContentUris.parseId;
@@ -62,7 +64,8 @@ class MediaStoreRequestHandler extends ContentStreamRequestHandler {
     if (request.hasSize()) {
       PicassoKind picassoKind = getPicassoKind(request.targetWidth, request.targetHeight);
       if (!isVideo && picassoKind == FULL) {
-        return new Result(null, getInputStream(request), DISK, exifOrientation);
+        Source source = Okio.source(getInputStream(request));
+        return new Result(null, source, DISK, exifOrientation);
       }
 
       long id = parseId(request.uri);
@@ -90,7 +93,8 @@ class MediaStoreRequestHandler extends ContentStreamRequestHandler {
       }
     }
 
-    return new Result(null, getInputStream(request), DISK, exifOrientation);
+    Source source = Okio.source(getInputStream(request));
+    return new Result(null, source, DISK, exifOrientation);
   }
 
   static PicassoKind getPicassoKind(int targetWidth, int targetHeight) {

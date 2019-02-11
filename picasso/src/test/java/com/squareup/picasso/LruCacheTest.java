@@ -23,15 +23,13 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.robolectric.RobolectricTestRunner;
-import org.robolectric.annotation.Config;
+import org.robolectric.RobolectricGradleTestRunner;
 
 import static android.graphics.Bitmap.Config.ALPHA_8;
+import static com.google.common.truth.Truth.assertThat;
 import static junit.framework.Assert.fail;
-import static org.fest.assertions.api.Assertions.assertThat;
 
-@RunWith(RobolectricTestRunner.class)
-@Config(manifest = Config.NONE)
+@RunWith(RobolectricGradleTestRunner.class)
 public class LruCacheTest {
   // The use of ALPHA_8 simplifies the size math in tests since only one byte is used per-pixel.
   private final Bitmap A = Bitmap.createBitmap(1, 1, ALPHA_8);
@@ -154,8 +152,8 @@ public class LruCacheTest {
     cache.set("a", A);
     cache.set("b", B);
     cache.set("c", C);
-    cache.evictAll();
-    assertThat(cache.map).isEmpty();
+    cache.clear();
+    assertThat(cache.cache.snapshot()).isEmpty();
   }
 
   @Test public void clearPrefixedKey() {
@@ -167,7 +165,8 @@ public class LruCacheTest {
     cache.set("Hellos\nWorld!", D);
 
     cache.clearKeyUri("Hello");
-    assertThat(cache.map).hasSize(1).containsKey("Hellos\nWorld!");
+    assertThat(cache.cache.snapshot()).hasSize(1);
+    assertThat(cache.cache.snapshot()).containsKey("Hellos\nWorld!");
   }
 
   @Test public void invalidate() {
@@ -175,7 +174,44 @@ public class LruCacheTest {
     cache.set("Hello\nAlice!", A);
     assertThat(cache.size()).isEqualTo(1);
     cache.clearKeyUri("Hello");
-    assertThat(cache.size()).isZero();
+    assertThat(cache.size()).isEqualTo(0);
+  }
+
+  @Test public void overMaxSizeDoesNotClear() {
+    LruCache cache = new LruCache(16);
+    Bitmap size4 = Bitmap.createBitmap(2, 2, ALPHA_8);
+    Bitmap size16 = Bitmap.createBitmap(4, 4, ALPHA_8);
+    Bitmap size25 = Bitmap.createBitmap(5, 5, ALPHA_8);
+    cache.set("4", size4);
+    expectedPutCount++;
+    assertHit(cache, "4", size4);
+    cache.set("16", size16);
+    expectedPutCount++;
+    expectedEvictionCount++; // size4 was evicted.
+    assertMiss(cache, "4");
+    assertHit(cache, "16", size16);
+    cache.set("25", size25);
+    assertHit(cache, "16", size16);
+    assertMiss(cache, "25");
+    assertThat(cache.size()).isEqualTo(16);
+  }
+
+  @Test public void overMaxSizeRemovesExisting() {
+    LruCache cache = new LruCache(20);
+    Bitmap size4 = Bitmap.createBitmap(2, 2, ALPHA_8);
+    Bitmap size16 = Bitmap.createBitmap(4, 4, ALPHA_8);
+    Bitmap size25 = Bitmap.createBitmap(5, 5, ALPHA_8);
+    cache.set("small", size4);
+    expectedPutCount++;
+    assertHit(cache, "small", size4);
+    cache.set("big", size16);
+    expectedPutCount++;
+    assertHit(cache, "small", size4);
+    assertHit(cache, "big", size16);
+    cache.set("big", size25);
+    assertHit(cache, "small", size4);
+    assertMiss(cache, "big");
+    assertThat(cache.size()).isEqualTo(4);
   }
 
   private void assertHit(LruCache cache, String key, Bitmap value) {
@@ -198,10 +234,10 @@ public class LruCacheTest {
   }
 
   private void assertSnapshot(LruCache cache, Object... keysAndValues) {
-    List<Object> actualKeysAndValues = new ArrayList<Object>();
-    for (Map.Entry<String, Bitmap> entry : cache.map.entrySet()) {
+    List<Object> actualKeysAndValues = new ArrayList<>();
+    for (Map.Entry<String, LruCache.BitmapAndSize> entry : cache.cache.snapshot().entrySet()) {
       actualKeysAndValues.add(entry.getKey());
-      actualKeysAndValues.add(entry.getValue());
+      actualKeysAndValues.add(entry.getValue().bitmap);
     }
 
     // assert using lists because order is important for LRUs

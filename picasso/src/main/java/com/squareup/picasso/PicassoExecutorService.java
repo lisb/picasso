@@ -18,7 +18,6 @@ package com.squareup.picasso;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.telephony.TelephonyManager;
-
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -93,7 +92,7 @@ class PicassoExecutorService extends ThreadPoolExecutor {
       implements Comparable<PicassoFutureTask> {
     private final BitmapHunter hunter;
 
-    public PicassoFutureTask(BitmapHunter hunter) {
+    PicassoFutureTask(BitmapHunter hunter) {
       super(hunter, null);
       this.hunter = hunter;
     }
