@@ -1,7 +1,6 @@
 package com.example.picasso;
 
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -11,6 +10,8 @@ import android.widget.ListView;
 import android.widget.ToggleButton;
 
 import com.squareup.picasso.Picasso;
+
+import androidx.fragment.app.FragmentActivity;
 
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
