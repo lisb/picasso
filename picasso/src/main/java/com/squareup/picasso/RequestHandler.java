@@ -100,7 +100,7 @@ public abstract class RequestHandler {
      * Returns the resulting EXIF orientation generated from a {@link #load(Request, int)} call.
      * This is only accessible to built-in RequestHandlers.
      */
-    Integer getExifOrientation() {
+    int getExifOrientation() {
       return exifOrientation;
     }
   }

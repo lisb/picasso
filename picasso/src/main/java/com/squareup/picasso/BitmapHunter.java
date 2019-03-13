@@ -49,6 +49,7 @@ import static androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270;
 import static androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90;
 import static androidx.exifinterface.media.ExifInterface.ORIENTATION_TRANSPOSE;
 import static androidx.exifinterface.media.ExifInterface.ORIENTATION_TRANSVERSE;
+import static androidx.exifinterface.media.ExifInterface.ORIENTATION_UNDEFINED;
 import static com.squareup.picasso.MemoryPolicy.shouldReadFromMemoryCache;
 import static com.squareup.picasso.Picasso.LoadedFrom.MEMORY;
 import static com.squareup.picasso.Picasso.Priority;
@@ -278,7 +279,7 @@ class BitmapHunter implements Runnable {
     RequestHandler.Result result = requestHandler.load(data, networkPolicy);
     if (result != null) {
       loadedFrom = result.getLoadedFrom();
-      Integer exifOrientation = result.getExifOrientation();
+      int exifOrientation = result.getExifOrientation();
       bitmap = result.getBitmap();
 
       // If there was no Bitmap then we need to decode it from the stream.
@@ -286,7 +287,7 @@ class BitmapHunter implements Runnable {
         Source source = result.getSource();
         try {
           bitmap = decodeStream(source, data);
-          if (exifOrientation == null) {
+          if (exifOrientation == ORIENTATION_UNDEFINED) {
             exifOrientation = getOrientationFromStream();
           }
         } finally {
@@ -298,8 +299,7 @@ class BitmapHunter implements Runnable {
         }
       }
 
-      this.exifOrientation = exifOrientation != null
-              ? exifOrientation : ORIENTATION_NORMAL;
+      this.exifOrientation = exifOrientation;
     }
 
     if (bitmap != null) {
