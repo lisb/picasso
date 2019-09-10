@@ -24,7 +24,6 @@ dependencies {
   api deps.okhttp
   implementation deps.supportAnnotations
   implementation deps.supportExifInterface
-  implementation deps.metadataExtractor
   testImplementation deps.junit
   testImplementation deps.truth
   testImplementation deps.robolectric

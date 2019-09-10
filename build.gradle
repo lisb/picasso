@@ -17,7 +17,6 @@ buildscript {
     supportFragment: 'androidx.fragment:fragment:1.0.0',
     supportAnnotations: 'androidx.annotation:annotation:1.0.2',
     supportExifInterface: 'androidx.exifinterface:exifinterface:1.0.0',
-    metadataExtractor: 'com.drewnoakes:metadata-extractor:2.8.1',
     junit: 'junit:junit:4.12',
     truth: 'com.google.truth:truth:0.36',
     robolectric: 'org.robolectric:robolectric:3.1',

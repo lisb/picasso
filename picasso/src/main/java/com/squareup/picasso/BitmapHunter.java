@@ -23,12 +23,7 @@ import android.os.Build;
 import android.util.Log;
 import android.view.Gravity;
 
-import com.drew.imaging.ImageMetadataReader;
-import com.drew.imaging.ImageProcessingException;
-import com.drew.metadata.Metadata;
-import com.drew.metadata.MetadataException;
-import com.drew.metadata.exif.ExifDirectoryBase;
-import com.drew.metadata.exif.ExifIFD0Directory;
+import androidx.exifinterface.media.ExifInterface;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
@@ -238,26 +233,13 @@ class BitmapHunter implements Runnable {
 
   static int getOrientationFromStream(InputStream in) {
     try {
-      final Metadata metadata = ImageMetadataReader.readMetadata(in);
-      final ExifIFD0Directory exifIFD0Directory =
-              metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
-      if (exifIFD0Directory != null
-              && exifIFD0Directory.containsTag(ExifDirectoryBase.TAG_ORIENTATION)) {
-        final int orientation = exifIFD0Directory.getInt(ExifDirectoryBase.TAG_ORIENTATION);
-        Log.v(TAG, "Image orientation gotten. orientation:" + orientation);
-        return orientation;
-      } else {
-        Log.v(TAG, "No orientation found.");
-        return ORIENTATION_NORMAL;
-      }
-    } catch (MetadataException e) {
-      Log.e(TAG, "Failed to get orientation.", e);
-    } catch (ImageProcessingException e) {
-      Log.e(TAG, "Failed to get orientation.", e);
+      final ExifInterface exifInterface = new ExifInterface(in);
+      return exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION,
+              ExifInterface.ORIENTATION_NORMAL);
     } catch (IOException e) {
       Log.e(TAG, "Failed to get orientation.", e);
+      return ORIENTATION_NORMAL;
     }
-    return ORIENTATION_NORMAL;
   }
 
   Bitmap hunt() throws IOException {
